@@ -8,7 +8,6 @@ Package for download
 - Hide icon from doc
 
 ## v2 or later
-- Allow 
 - How to turn on the microphone icon in Nova.app mode
 - Model dropdown
 - Research an installer
