@@ -60,6 +60,8 @@ def log_exceptions(func: Callable):
 
 
 class AppDelegate(NSObject):
+    status_item = None
+
     def init(self):
         self = objc.super(AppDelegate, self).init() # pyright: ignore[reportAttributeAccessIssue]
         if self is None:
@@ -73,8 +75,18 @@ class AppDelegate(NSObject):
         self.listening = False
 
         return self
+    
 
     def applicationDidFinishLaunching_(self, notification):
+        # Don't create a duplicate menu bar icon
+        if self.status_item:
+            return
+
+        import inspect, threading
+        stack = " → ".join(f"{f.function}:{f.lineno}" for f in inspect.stack()[1:5])
+        logging.error(f"STATUS ITEM CREATE pid={os.getpid()} | thread={threading.current_thread().name} | stack={stack}")
+
+
         # Create the status bar item
         self.status_item = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)
 
@@ -157,7 +169,11 @@ logging.basicConfig(
 logging.info("Application started.")
 
 if __name__ == "__main__":
-    try:
-        run()
-    except Exception as e:
-        logging.error(e)
+    import multiprocessing
+    # Guard against duplicating the menu bar application
+    multiprocessing.freeze_support()
+    if multiprocessing.current_process().name == "MainProcess":
+        try:
+            run()
+        except Exception as e:
+            logging.error(e)
