@@ -77,6 +77,7 @@ class AppDelegate(NSObject):
         self.nova_prime = True
         self.nova = Nova(SimpleAi("llama3.1:8b", self.settings["system-prompt"]))
         self.listening = False
+        self.processing = False
 
         return self
     
@@ -94,13 +95,7 @@ class AppDelegate(NSObject):
         self.status_item = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)
 
         # Pick an SF Symbol (e.g., "triangle" looks like an A without bar)
-        # self.setIcon("atom")
-        config = NSImageSymbolConfiguration.configurationWithPointSize_weight_scale_(16, 0, 1)  
-        icon = NSImage.imageWithSystemSymbolName_accessibilityDescription_("atom", None)
-        icon = icon.imageWithSymbolConfiguration_(config)
-
-        self.status_item.button().setImage_(icon)
-
+        self.set_icon("atom")
 
         # Enable left & right clicks
         button = self.status_item.button()
@@ -115,6 +110,13 @@ class AppDelegate(NSObject):
         self.menu.addItem_(reset_item)
         self.menu.addItem_(quit_item)
 
+    def set_icon(self, name):
+        config = NSImageSymbolConfiguration.configurationWithPointSize_weight_scale_(16, 0, 1)  
+        icon = NSImage.imageWithSystemSymbolName_accessibilityDescription_(name, None)
+        icon = icon.imageWithSymbolConfiguration_(config)
+        
+        self.status_item.button().setImage_(icon) # pyright: ignore[reportOptionalMemberAccess]
+
     @log_exceptions
     def statusItemClicked_(self, sender):
         """Handle left vs right click on status bar icon"""
@@ -123,17 +125,25 @@ class AppDelegate(NSObject):
         if event.type() == 3:  # Right-click
             # print("right", event.type())
             if self.listening:
-                self.nova.stop()
+                self.nova.stop_listening()
                 self.listening = False
+                self.set_icon("atom")
+            elif self.processing:
+                self.stopped_processing()
             else:
-                self.status_item.popUpStatusItemMenu_(self.menu)
+                self.status_item.popUpStatusItemMenu_(self.menu) # pyright: ignore[reportOptionalMemberAccess]
         elif event.type() == 2:  # Left-click
             # print("left", event.type())
+            if self.processing:
+                return
             if self.listening:
-                self.nova.stop()
-                self.nova.process(self.nova_prime, temp_file)
+                self.nova.stop_listening()
+                self.nova.process(self.nova_prime, temp_file, self.stopped_processing)
+                self.processing = True
+                self.set_icon("cpu")
             else:
                 self.nova.start(choice(self.settings["human-prompts"]), temp_file)
+                self.set_icon("microphone")
             self.listening = not self.listening
             logging.info(f"changing self.listening to {self.listening}")
 
@@ -145,6 +155,11 @@ class AppDelegate(NSObject):
             subtitle="Conversation history cleared",
             message="Nova has been reset and is ready for a fresh start."
         )
+    
+    def stopped_processing(self):
+        self.nova.stop_processing()
+        self.processing = False
+        self.set_icon("atom")
 
 
 def run():
@@ -164,7 +179,8 @@ logging.basicConfig(
     handlers=[
         logging.FileHandler(log_file_name),
         logging.StreamHandler()  # Also log to console for development/debugging
-    ]
+    ],
+    force=True
 )
 
 # Example usage

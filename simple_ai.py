@@ -25,14 +25,3 @@ class SimpleAi:
       ) # type: ignore
       self._messages.append(response["message"])
       return response["message"]["content"]
-
-
-# with open("./opening_prompt.txt") as f:
-#     opening_prompt = f.read()
-# ai = SimpleAi("llama3.1:8b", opening_prompt)
-# while True:
-#     request: str = input("What do you want to ask?: ")
-#     if request:
-#         print(ai.chat(request))
-#     else:
-#        break
