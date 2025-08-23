@@ -74,13 +74,6 @@ class AppDelegate(NSObject):
 
         return self
 
-    # def setIcon(self, icon_name):
-    #     config = NSImageSymbolConfiguration.configurationWithPointSize_weight_scale_(16, 0, 1)  
-    #     icon = NSImage.imageWithSystemSymbolName_accessibilityDescription_(icon_name, None)
-    #     icon = icon.imageWithSymbolConfiguration_(config)
-
-    #     self.status_item.button().setImage_(icon)
-
     def applicationDidFinishLaunching_(self, notification):
         # Create the status bar item
         self.status_item = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)

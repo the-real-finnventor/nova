@@ -24,7 +24,7 @@ class Nova:
             return
         self.listener.terminate()
         _, stderr = self.listener.communicate()
-        if self.listener.returncode != 0:
+        if self.listener.returncode:
             logging.error(f"ffmpeg ERROR (code {self.listener.returncode}): {stderr}")
         self.listener = None
         logging.info("done listening")

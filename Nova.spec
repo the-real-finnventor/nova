@@ -41,5 +41,5 @@ app = BUNDLE(
     name='Nova.app',
     icon=None,
     bundle_identifier=None,
-    info_plist={"NSMicrophoneUsageDescription":"Nova needs to hear your request"},
+    info_plist={"NSMicrophoneUsageDescription":"Nova needs to hear your request", "LSUIElement": True},
 )
