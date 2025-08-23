@@ -14,6 +14,11 @@ import os
 import functools
 import logging
 from typing import Callable
+import inspect
+import threading
+import tempfile
+import logging
+import multiprocessing
 
 os.environ["PATH"] += os.pathsep + "/opt/homebrew/bin"
 logging.info(f"Path: {os.environ["PATH"]}")
@@ -34,7 +39,6 @@ def read_settings():
         return list(yaml.safe_load_all(f))[0]
 
 
-import tempfile
 temp_file = os.path.join(tempfile.gettempdir(), "said.mp3")
 
 
@@ -60,6 +64,8 @@ def log_exceptions(func: Callable):
 
 
 class AppDelegate(NSObject):
+    status_item = None
+
     def init(self):
         self = objc.super(AppDelegate, self).init() # pyright: ignore[reportAttributeAccessIssue]
         if self is None:
@@ -73,8 +79,17 @@ class AppDelegate(NSObject):
         self.listening = False
 
         return self
+    
 
     def applicationDidFinishLaunching_(self, notification):
+        # Don't create a duplicate menu bar icon
+        if self.status_item:
+            return
+
+        stack = " → ".join(f"{f.function}:{f.lineno}" for f in inspect.stack()[1:5])
+        logging.error(f"STATUS ITEM CREATE pid={os.getpid()} | thread={threading.current_thread().name} | stack={stack}")
+
+
         # Create the status bar item
         self.status_item = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)
 
@@ -138,7 +153,6 @@ def run():
     app.setDelegate_(delegate)
     app.run()
 
-import logging
 log_dir = os.path.expanduser("~/Library/Logs/Nova")
 os.makedirs(log_dir, exist_ok=True)
 log_file_name = os.path.join(log_dir, "nova.log")
@@ -157,7 +171,10 @@ logging.basicConfig(
 logging.info("Application started.")
 
 if __name__ == "__main__":
-    try:
-        run()
-    except Exception as e:
-        logging.error(e)
+    # Guard against duplicating the menu bar application
+    multiprocessing.freeze_support()
+    if multiprocessing.current_process().name == "MainProcess":
+        try:
+            run()
+        except Exception as e:
+            logging.error(e)
