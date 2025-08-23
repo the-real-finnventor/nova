@@ -3,9 +3,7 @@
 ## v1
 Package for download
 - Instructions: README.md
-- How to package as an application
-- How to configure to run on startup
-- Hide icon from doc
+- Change app icon
 
 ## v2 or later
 - How to turn on the microphone icon in Nova.app mode
