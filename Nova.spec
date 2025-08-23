@@ -40,6 +40,10 @@ app = BUNDLE(
     exe,
     name='Nova.app',
     icon=None,
-    bundle_identifier=None,
-    info_plist={"NSMicrophoneUsageDescription":"Nova needs to hear your request", "LSUIElement": True},
+    bundle_identifier="com.everspaugh.nova",
+    info_plist= { 
+        "NSMicrophoneUsageDescription":"Nova needs to hear your request", 
+        "LSUIElement": True,
+         "RunAtLoad": True
+        },
 )
