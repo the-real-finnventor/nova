@@ -1,13 +1,13 @@
-from Cocoa import (
+from Cocoa import ( # type: ignore
     NSApplication, NSStatusBar, NSVariableStatusItemLength, # pyright: ignore[reportAttributeAccessIssue]
     NSObject, NSMenu, NSMenuItem, NSUserNotification, NSUserNotificationCenter, NSImage, NSImageSymbolConfiguration # pyright: ignore[reportAttributeAccessIssue]
 )
-import objc
+import objc # type: ignore
 from objc import python_method
-from whisper import load_model
+from whisper import load_model # type: ignore
 from simple_ai import SimpleAi
 from nova import Nova
-import yaml
+import yaml # type: ignore
 import sys
 from random import choice
 import os
@@ -72,15 +72,22 @@ class AppDelegate(NSObject):
             return None
 
         self.settings = read_settings()
+        self.nova_settings = {}
 
         # Initialize AI models
-        self.nova_prime = True
-        self.nova = Nova(SimpleAi("llama3.1:8b", self.settings["system-prompt"]))
+        self.nova_prime = self.settings["prime-mode"]
+        self.set_nova_mode(self.nova_prime)
+        self.nova = Nova(SimpleAi("llama3.1:8b", self.nova_settings["system-prompt"]), self.nova_settings["voice"])
         self.listening = False
         self.processing = False
 
         return self
     
+    def set_nova_mode(self, prime: bool):
+        if prime:
+            self.nova_settings = self.settings["nova-prime-defaults"]
+        else:
+            self.nova_settings = self.settings["nova-core-defaults"]
 
     def applicationDidFinishLaunching_(self, notification):
         # Don't create a duplicate menu bar icon
@@ -133,7 +140,6 @@ class AppDelegate(NSObject):
             else:
                 self.status_item.popUpStatusItemMenu_(self.menu) # pyright: ignore[reportOptionalMemberAccess]
         elif event.type() == 2:  # Left-click
-            # print("left", event.type())
             if self.processing:
                 return
             if self.listening:
@@ -142,14 +148,14 @@ class AppDelegate(NSObject):
                 self.processing = True
                 self.set_icon("cpu")
             else:
-                self.nova.start(choice(self.settings["human-prompts"]), temp_file)
+                self.nova.start(choice(self.nova_settings["human-prompts"]), temp_file)
                 self.set_icon("microphone")
             self.listening = not self.listening
             logging.info(f"changing self.listening to {self.listening}")
 
     def resetModel_(self, sender):
         """Reset the AI model and show a macOS notification"""
-        self.ai = SimpleAi("llama3.1:8b", self.settings["system-prompt"])
+        self.ai = SimpleAi("llama3.1:8b", self.nova_settings["system-prompt"])
         self.showNotification(
             title="Nova Model Reset",
             subtitle="Conversation history cleared",
