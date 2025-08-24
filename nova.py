@@ -38,6 +38,7 @@ class Nova:
         self.process_thread = threading.Thread(target=self._process, args=(nova_prime, temp_file, callback))
         self.process_thread.start()
 
+
     def _process(self, nova_prime: bool, temp_file, callback):
         logging.info(f"Transcribing file `{temp_file}`")
         result = self.whisper.transcribe(temp_file, fp16=False)

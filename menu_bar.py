@@ -1,6 +1,7 @@
 from Cocoa import ( # type: ignore
     NSApplication, NSStatusBar, NSVariableStatusItemLength, # pyright: ignore[reportAttributeAccessIssue]
-    NSObject, NSMenu, NSMenuItem, NSUserNotification, NSUserNotificationCenter, NSImage, NSImageSymbolConfiguration # pyright: ignore[reportAttributeAccessIssue]
+    NSObject, NSMenu, NSMenuItem, NSUserNotification, NSUserNotificationCenter, NSImage, NSImageSymbolConfiguration, # pyright: ignore[reportAttributeAccessIssue]
+    NSControlStateValueOn, NSControlStateValueOff
 )
 import objc # type: ignore
 from objc import python_method
@@ -38,7 +39,6 @@ def read_settings():
     with open(settings_path, 'r') as f:
         return list(yaml.safe_load_all(f))[0]
 
-
 temp_file = os.path.join(tempfile.gettempdir(), "said.mp3")
 
 
@@ -66,29 +66,47 @@ def log_exceptions(func: Callable):
 class AppDelegate(NSObject):
     status_item = None
 
+    @log_exceptions
     def init(self):
         self = objc.super(AppDelegate, self).init() # pyright: ignore[reportAttributeAccessIssue]
-        if self is None:
-            return None
-
         self.settings = read_settings()
-        self.nova_settings = {}
-
-        # Initialize AI models
         self.nova_prime = self.settings["prime-mode"]
-        self.set_nova_mode(self.nova_prime)
-        self.nova = Nova(SimpleAi("llama3.1:8b", self.nova_settings["system-prompt"]), self.nova_settings["voice"])
         self.listening = False
         self.processing = False
-
         return self
-    
+
+
     def set_nova_mode(self, prime: bool):
         if prime:
+            logging.info("Nova Prime engaged")
             self.nova_settings = self.settings["nova-prime-defaults"]
-        else:
-            self.nova_settings = self.settings["nova-core-defaults"]
+            self.nova_prime = True
 
+            self.menu_item_prime.setState_(NSControlStateValueOn)
+            self.menu_item_prime.setEnabled_(False)
+            self.menu_item_core.setState_(NSControlStateValueOff)
+            self.menu_item_core.setEnabled_(True)
+
+        else:
+            logging.info("Nova Core engaged")
+            self.nova_settings = self.settings["nova-core-defaults"]
+            self.nova_prime = False
+
+            self.menu_item_prime.setState_(NSControlStateValueOff)
+            self.menu_item_prime.setEnabled_(True)
+            self.menu_item_core.setState_(NSControlStateValueOn)
+            self.menu_item_core.setEnabled_(False)
+
+
+        self.nova = Nova(SimpleAi("llama3.1:8b", self.nova_settings["system-prompt"]), self.nova_settings["voice"])
+        logging.info("Done setting up the Nova object")
+
+
+    def switchMode_(self, sender):
+        self.set_nova_mode(sender.tag())
+
+
+    @log_exceptions
     def applicationDidFinishLaunching_(self, notification):
         # Don't create a duplicate menu bar icon
         if self.status_item:
@@ -97,11 +115,8 @@ class AppDelegate(NSObject):
         stack = " → ".join(f"{f.function}:{f.lineno}" for f in inspect.stack()[1:5])
         logging.info(f"Status item created: pid={os.getpid()} | thread={threading.current_thread().name} | stack={stack}")
 
-
         # Create the status bar item
         self.status_item = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)
-
-        # Pick an SF Symbol (e.g., "triangle" looks like an A without bar)
         self.set_icon("atom")
 
         # Enable left & right clicks
@@ -112,10 +127,28 @@ class AppDelegate(NSObject):
 
         # Right-click menu
         self.menu = NSMenu.alloc().init()
-        reset_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Reset Model", "resetModel:", "")
-        quit_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Quit", "terminate:", "")
-        self.menu.addItem_(reset_item)
-        self.menu.addItem_(quit_item)
+        self.menu.setAutoenablesItems_(False)
+
+        # # Nova Prime/Core options
+        self.menu_item_prime = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Nova Prime", "switchMode:", "")
+        self.menu_item_prime.setTarget_(self)
+        self.menu_item_prime.setTag_(True)
+        self.menu.addItem_(self.menu_item_prime)
+
+        self.menu_item_core = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Nova Core", "switchMode:", "")
+        self.menu_item_core.setTarget_(self)
+        self.menu_item_core.setTag_(False)
+        self.menu.addItem_(self.menu_item_core)
+
+        self.menu.addItem_(
+            NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Reset Model", "resetModel:", "")
+        )
+        self.menu.addItem_(
+            NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Quit", "terminate:", "")
+        )
+
+        self.set_nova_mode(self.nova_prime)
+
 
     def set_icon(self, name):
         config = NSImageSymbolConfiguration.configurationWithPointSize_weight_scale_(16, 0, 1)  
@@ -130,7 +163,6 @@ class AppDelegate(NSObject):
         event = NSApplication.sharedApplication().currentEvent()
         logging.info(msg=f"menu bar clicked: self.listening={self.listening}")
         if event.type() == 3:  # Right-click
-            # print("right", event.type())
             if self.listening:
                 self.nova.stop_listening()
                 self.listening = False
@@ -153,6 +185,7 @@ class AppDelegate(NSObject):
             self.listening = not self.listening
             logging.info(f"changing self.listening to {self.listening}")
 
+
     def resetModel_(self, sender):
         """Reset the AI model and show a macOS notification"""
         self.ai = SimpleAi("llama3.1:8b", self.nova_settings["system-prompt"])
@@ -162,6 +195,7 @@ class AppDelegate(NSObject):
             message="Nova has been reset and is ready for a fresh start."
         )
     
+
     def stopped_processing(self):
         self.nova.stop_processing()
         self.processing = False
