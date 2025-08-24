@@ -95,7 +95,7 @@ class AppDelegate(NSObject):
             return
 
         stack = " → ".join(f"{f.function}:{f.lineno}" for f in inspect.stack()[1:5])
-        logging.error(f"STATUS ITEM CREATE pid={os.getpid()} | thread={threading.current_thread().name} | stack={stack}")
+        logging.info(f"Status item created: pid={os.getpid()} | thread={threading.current_thread().name} | stack={stack}")
 
 
         # Create the status bar item
