@@ -88,7 +88,7 @@ class AppDelegate(NSObject):
             return
 
         stack = " → ".join(f"{f.function}:{f.lineno}" for f in inspect.stack()[1:5])
-        logging.error(f"STATUS ITEM CREATE pid={os.getpid()} | thread={threading.current_thread().name} | stack={stack}")
+        logging.info(f"status item created pid={os.getpid()} | thread={threading.current_thread().name} | stack={stack}")
 
 
         # Create the status bar item
@@ -105,10 +105,31 @@ class AppDelegate(NSObject):
 
         # Right-click menu
         self.menu = NSMenu.alloc().init()
-        reset_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Reset Model", "resetModel:", "")
-        quit_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Quit", "terminate:", "")
-        self.menu.addItem_(reset_item)
-        self.menu.addItem_(quit_item)
+        self.menu.addItem_(
+            NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Command Console", "console:", "")
+        )
+        self.menu.addItem_(
+            NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Reset Model", "resetModel:", "")
+        )
+        self.menu.addItem_(
+            NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Quit", "terminate:", "")
+        )
+
+    def console_(self, _):
+        # escape quotes for the shell command
+        import shlex
+        import subprocess
+        prompt = shlex.quote("You are nova prime, an overpowered cybernetic intelligence")
+            # self.settings["system-prompt"])
+
+        # Build the ollama command
+        ollama_cmd = f'ollama run llama3.1:8b {prompt}'
+
+        # Build AppleScript (Terminal.app)
+        osa_cmd = f'tell application "Terminal" to do script "{ollama_cmd}" activate'
+        logging.info(" ".join( ["osascript", "-e", osa_cmd]))
+        logging.info("starting terminal")
+        subprocess.Popen(["osascript", "-e", osa_cmd])
 
     def set_icon(self, name):
         config = NSImageSymbolConfiguration.configurationWithPointSize_weight_scale_(16, 0, 1)  
