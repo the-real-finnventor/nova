@@ -1,21 +1,21 @@
 # Nova Roadmap
 
 ## v1
-Package for download
-- Instructions: README.md
-- Change app icon
+Released!
 
-## v2 or later
-- How to turn on the microphone icon in Nova.app mode
-- Model dropdown
-- Research an installer
-- Model selector in dropdown
-- Auto-reset after timeout
+## v2 
 - Configuration
-    - Nova prime: slay burn, system prompt, human prompts
-    - voice
-- Cancel a reponse in-process by clicking the icon again
-- Processing indicator in the menu bar
+    - [x] Nova prime: slay burn, system prompt, human prompts
+    - [x] Voice and set the default voice to british robot
+- Text mode -- Command Console
+- Model selector in dropdown
+    - Query models on startup
+- Mode selector: core, prime
+- Auto-reset conversation after timeout
+- Build an app installer
+    - App signing
+    - bundle: ffmpeg, ollama
 
-
-
+# v3 or later
+- Web console -- settings and chat mode
+- Connect to the hive mind (maybe)
