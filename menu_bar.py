@@ -20,6 +20,7 @@ import threading
 import tempfile
 import logging
 import multiprocessing
+from datetime import datetime, timedelta
 
 os.environ["PATH"] += os.pathsep + "/opt/homebrew/bin"
 logging.info(f"Path: {os.environ["PATH"]}")
@@ -73,6 +74,11 @@ class AppDelegate(NSObject):
         self.nova_prime = self.settings["prime-mode"]
         self.listening = False
         self.processing = False
+<<<<<<< HEAD
+=======
+        self.last_request: datetime = None
+
+>>>>>>> origin/main
         return self
 
 
@@ -80,7 +86,13 @@ class AppDelegate(NSObject):
         if prime:
             logging.info("Nova Prime engaged")
             self.nova_settings = self.settings["nova-prime-defaults"]
+<<<<<<< HEAD
             self.nova_prime = True
+=======
+        else:
+            self.nova_settings = self.settings["nova-core-defaults"]
+        self.nova = Nova(SimpleAi("llama3.1:8b", self.nova_settings["system-prompt"]), self.nova_settings["voice"])
+>>>>>>> origin/main
 
             self.menu_item_prime.setState_(NSControlStateValueOn)
             self.menu_item_prime.setEnabled_(False)
@@ -180,8 +192,11 @@ class AppDelegate(NSObject):
                 self.processing = True
                 self.set_icon("cpu")
             else:
+                if self.last_request and datetime.now() - self.last_request > timedelta(minutes=30):
+                    self.set_nova_mode(self.nova_prime)
                 self.nova.start(choice(self.nova_settings["human-prompts"]), temp_file)
                 self.set_icon("microphone")
+                self.last_request = datetime.now()
             self.listening = not self.listening
             logging.info(f"changing self.listening to {self.listening}")
 
