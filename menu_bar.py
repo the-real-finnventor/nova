@@ -23,12 +23,6 @@ import logging
 import multiprocessing
 from datetime import datetime, timedelta
 
-
-### LEFT OFF: 
-# Need to pip install ollama
-# Use ollama.list to get the list of models and on-selection override the current model
-# Need to parameterize the default model selection
-
 os.environ["PATH"] += os.pathsep + "/opt/homebrew/bin"
 logging.info(f"Path: {os.environ["PATH"]}")
 
