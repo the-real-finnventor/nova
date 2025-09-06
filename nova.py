@@ -53,7 +53,7 @@ class Nova:
             return
 
         if nova_prime:
-            answer += ". Slay. Burn."
+            answer += " Slay. Burn."
 
         logging.info(f"cybernetic intelligence response: {answer}")
 
