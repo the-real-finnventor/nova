@@ -10,6 +10,7 @@ from simple_ai import SimpleAi
 from nova import Nova
 import yaml # type: ignore
 import sys
+import ollama
 from random import choice
 import os
 import functools
@@ -65,34 +66,25 @@ def log_exceptions(func: Callable):
 
 
 class AppDelegate(NSObject):
-    status_item = None
+    status_item = None    
 
     @log_exceptions
-    def init(self):
+    def init(self) -> "AppDelgate":
         self = objc.super(AppDelegate, self).init() # pyright: ignore[reportAttributeAccessIssue]
         self.settings = read_settings()
         self.nova_prime = self.settings["prime-mode"]
+        self.model = self.settings["default-model"]
         self.listening = False
         self.processing = False
-<<<<<<< HEAD
-=======
-        self.last_request: datetime = None
-
->>>>>>> origin/main
+        self.last_request: datetime|None = None
         return self
 
 
-    def set_nova_mode(self, prime: bool):
+    def set_nova_mode(self, prime: bool, model: str) -> None:
         if prime:
             logging.info("Nova Prime engaged")
             self.nova_settings = self.settings["nova-prime-defaults"]
-<<<<<<< HEAD
             self.nova_prime = True
-=======
-        else:
-            self.nova_settings = self.settings["nova-core-defaults"]
-        self.nova = Nova(SimpleAi("llama3.1:8b", self.nova_settings["system-prompt"]), self.nova_settings["voice"])
->>>>>>> origin/main
 
             self.menu_item_prime.setState_(NSControlStateValueOn)
             self.menu_item_prime.setEnabled_(False)
@@ -110,12 +102,23 @@ class AppDelegate(NSObject):
             self.menu_item_core.setEnabled_(False)
 
 
-        self.nova = Nova(SimpleAi("llama3.1:8b", self.nova_settings["system-prompt"]), self.nova_settings["voice"])
-        logging.info("Done setting up the Nova object")
+        self.nova = Nova(SimpleAi(model, self.nova_settings["system-prompt"]), self.nova_settings["voice"])
+        logging.info(f"Configuring Nova: model={model}; prime={self.nova_prime}; voice={self.nova_settings["voice"]}")
 
 
     def switchMode_(self, sender):
-        self.set_nova_mode(sender.tag())
+        self.set_nova_mode(sender.tag(), self.model)
+
+
+    @objc.IBAction
+    def selectModel_(self, sender):
+        self.model = sender.title()
+        logging.info(f"sender={sender}; sender.title()={sender.title()}")
+        for i in range(self.modelMenu.numberOfItems()):
+            logging.info(f"i={i}   it={self.modelMenu.itemAtIndex_(i)}")
+            it = self.modelMenu.itemAtIndex_(i)
+            it.setState_(NSControlStateValueOn if it.title() == self.model else NSControlStateValueOff)
+        self.set_nova_mode(self.set_nova_mode, self.model)
 
 
     @log_exceptions
@@ -152,6 +155,31 @@ class AppDelegate(NSObject):
         self.menu_item_core.setTag_(False)
         self.menu.addItem_(self.menu_item_core)
 
+        # Models submenu
+        self.modelMenu = NSMenu.alloc().init()
+        modelRoot = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Models", None, "")
+        modelRoot.setSubmenu_(self.modelMenu)
+        self.menu.addItem_(modelRoot)
+
+        # Query installed models
+        resp = ollama.list()  # {'models': [{'name': 'llama3:8b', ...}, ...]}
+        names = [m.get('model') for m in resp.get('models', [])]
+
+        if not names:
+            placeholder = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("No models found", None, "")
+            placeholder.setEnabled_(False)
+            self.modelMenu.addItem_(placeholder)
+        else:
+            if not getattr(self, "currentModel", None) or self.currentModel not in names:
+                self.currentModel = names[0]
+            for name in names:
+                item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(name, "selectModel:", "")
+                item.setTarget_(self)
+                item.setRepresentedObject_(name)
+                item.setState_(NSControlStateValueOn if name == self.currentModel else NSControlStateValueOff)
+                self.modelMenu.addItem_(item)
+
+        # Reset/Quit
         self.menu.addItem_(
             NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Reset Model", "resetModel:", "")
         )
@@ -159,7 +187,7 @@ class AppDelegate(NSObject):
             NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Quit", "terminate:", "")
         )
 
-        self.set_nova_mode(self.nova_prime)
+        self.set_nova_mode(self.nova_prime, self.model)
 
 
     def set_icon(self, name):
